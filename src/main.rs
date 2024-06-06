@@ -1,6 +1,9 @@
 use actix_web::{post, web, App, HttpResponse, HttpServer, Responder};
-use log::info;
+use cloudesire_client::{DeploymentStatus, Subscription};
+use log::{debug, info};
 use serde::Deserialize;
+
+pub mod cloudesire_client;
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "UPPERCASE")]
@@ -24,7 +27,39 @@ async fn event(event: web::Json<EventNotification>) -> impl Responder {
         "Received notification for {} with id {} of type {:?}",
         event.entity, event.id, event.lifecycle
     );
+
+    if event.entity.ne("Subscription") {
+        debug!("Skipping {} events", event.entity);
+        return HttpResponse::NoContent();
+    }
+
+    let subscription = cloudesire_client::get_subscription(event.id);
+
+    match event.lifecycle {
+        Lifecycle::Created | Lifecycle::Modified => subscription_deploy(subscription),
+        Lifecycle::Deleted => subscription_undeploy(subscription),
+    }
+
     HttpResponse::NoContent()
+}
+
+fn subscription_deploy(subscription: Subscription) {
+    match subscription.deployment_status {
+        DeploymentStatus::Pending => {
+            if subscription.paid {
+                info!("Provision tenant resources");
+                cloudesire_client::update_status(subscription.id, DeploymentStatus::Deployed);
+            }
+        }
+        DeploymentStatus::Stopped => info!("Temporarily suspend the subscription"),
+        DeploymentStatus::Deployed => info!("Check if tenant is OK"),
+        _ => debug!("Unimplemented"),
+    }
+}
+
+fn subscription_undeploy(subscription: Subscription) {
+    info!("Unprovision tenant and release resources");
+    cloudesire_client::update_status(subscription.id, DeploymentStatus::Undeployed);
 }
 
 #[actix_web::main]
