@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::env;
+use ureq::Request;
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "UPPERCASE")]
@@ -19,12 +20,7 @@ pub struct Subscription {
 }
 
 pub fn get_subscription(id: u32) -> Subscription {
-    let base_url = env::var("CMW_BASE_URL").unwrap_or("http://localhost:8081".to_string());
-    let auth_token = env::var("CMW_AUTH_TOKEN").unwrap_or("test-token".to_string());
-
-    let url = base_url + "/subscription/" + &id.to_string();
-    ureq::get(&url)
-        .set("CMW-Auth-Token", &auth_token)
+    build_request("GET", "subscription", id)
         .call()
         .unwrap()
         .into_json()
@@ -40,12 +36,17 @@ pub fn update_status(subscription_id: u32, status: DeploymentStatus) {
         return;
     }
 
+    build_request("PATCH", "subscription", subscription_id)
+        .send_json(ureq::json!({"deploymentStatus": status}))
+        .unwrap();
+}
+
+fn build_request(method: &str, path: &str, id: u32) -> Request {
     let base_url = env::var("CMW_BASE_URL").unwrap_or("http://localhost:8081".to_string());
     let auth_token = env::var("CMW_AUTH_TOKEN").unwrap_or("test-token".to_string());
 
-    let url = base_url + "/subscription/" + &subscription_id.to_string();
-    ureq::patch(&url)
+    let url = base_url + "/" + path + "/" + &id.to_string();
+    ureq::agent()
+        .request(method, &url)
         .set("CMW-Auth-Token", &auth_token)
-        .send_json(ureq::json!({"deploymentStatus": status}))
-        .unwrap();
 }
