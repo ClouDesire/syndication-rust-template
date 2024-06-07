@@ -22,9 +22,9 @@ pub struct Subscription {
 pub fn get_subscription(id: u32) -> Subscription {
     build_request("GET", "subscription", id)
         .call()
-        .unwrap()
+        .expect("call should succeed")
         .into_json()
-        .unwrap()
+        .expect("response should be deserialized")
 }
 
 pub fn update_status(subscription_id: u32, status: DeploymentStatus) {
@@ -38,7 +38,7 @@ pub fn update_status(subscription_id: u32, status: DeploymentStatus) {
 
     build_request("PATCH", "subscription", subscription_id)
         .send_json(ureq::json!({"deploymentStatus": status}))
-        .unwrap();
+        .expect("call should succeed");
 }
 
 fn build_request(method: &str, path: &str, id: u32) -> Request {

@@ -53,7 +53,7 @@ fn subscription_deploy(subscription: Subscription) {
         }
         DeploymentStatus::Stopped => info!("Temporarily suspend the subscription"),
         DeploymentStatus::Deployed => info!("Check if tenant is OK"),
-        _ => debug!("Unimplemented"),
+        _ => todo!(),
     }
 }
 
