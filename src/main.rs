@@ -21,23 +21,41 @@ struct EventNotification {
     lifecycle: Lifecycle,
 }
 
+enum Event {
+    Subscription(EventNotification),
+    Unmanaged(String),
+}
+
+impl From<EventNotification> for Event {
+    fn from(notification: EventNotification) -> Event {
+        match notification.entity.as_str() {
+            "Subscription" => Event::Subscription(notification),
+            _ => Event::Unmanaged(notification.entity),
+        }
+    }
+}
+
 #[post("/event")]
-async fn event(event: web::Json<EventNotification>) -> impl Responder {
+async fn event(notification: web::Json<EventNotification>) -> impl Responder {
     info!(
         "Received notification for {} with id {} of type {:?}",
-        event.entity, event.id, event.lifecycle
+        notification.entity, notification.id, notification.lifecycle
     );
 
-    if event.entity.ne("Subscription") {
-        debug!("Skipping {} events", event.entity);
-        return HttpResponse::NoContent();
-    }
+    let event = Event::from(notification.into_inner());
 
-    let subscription = cloudesire_client::get_subscription(event.id);
+    match event {
+        Event::Subscription(notification) => {
+            let subscription = cloudesire_client::get_subscription(notification.id);
 
-    match event.lifecycle {
-        Lifecycle::Created | Lifecycle::Modified => subscription_deploy(subscription),
-        Lifecycle::Deleted => subscription_undeploy(subscription),
+            match notification.lifecycle {
+                Lifecycle::Created | Lifecycle::Modified => subscription_deploy(subscription),
+                Lifecycle::Deleted => subscription_undeploy(subscription),
+            }
+        }
+        Event::Unmanaged(entity) => {
+            debug!("Skipping {} events", entity);
+        }
     }
 
     HttpResponse::NoContent()
