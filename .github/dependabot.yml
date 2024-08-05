@@ -3,7 +3,7 @@ updates:
   - package-ecosystem: cargo
     directory: "/"
     commit-message:
-      prefix: "chore(cargo)"
+      prefix: "deps(cargo)"
     schedule:
       interval: weekly
       day: sunday
