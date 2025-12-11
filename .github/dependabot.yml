@@ -5,7 +5,6 @@ updates:
     commit-message:
       prefix: "deps(cargo)"
     schedule:
-      interval: weekly
-      day: sunday
+      interval: monthly
     assignees:
       - malteo
