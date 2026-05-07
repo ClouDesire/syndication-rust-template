@@ -7,4 +7,3 @@ updates:
     schedule:
       interval: monthly
     assignees:
-      - malteo
